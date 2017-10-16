@@ -1,0 +1,7 @@
+[package]
+name = "concuer"
+version = "0.1.0"
+authors = ["Aaron Lip <kitsunay34@gmail.com>"]
+
+[dependencies]
+rand = "*"
