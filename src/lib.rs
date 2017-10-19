@@ -2,7 +2,7 @@ use std::thread::*;
 extern crate rand;
 
 // Concuer is a lightweight threading library. A play on "Concurrent" and "Divide and Conquer".
-// It provides two types of threading traits.
+// It provides a few experimental threading traits.
 
 pub trait Worker<R>
 where
@@ -32,20 +32,30 @@ where
     fn body(self) -> R;
 }
 
+pub trait Task<A, R>
+where
+    Self: Sync + Send + Sized + 'static,
+    A: Send + 'static,
+    R: Send + 'static,
+{
+    fn run(&self, a: A) -> JoinHandle<R> {
+        spawn(move || {
+            Self::body(a)
+        })
+    }
+    
+    fn body(a: A) -> R;
+}
+
 #[cfg(test)]
 mod tests {
-	use Worker;
+	use {Worker, Concurrent};
 	use rand;
 	use std::{thread, time};
 
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
+    struct WorkThread;
 
-    struct Message;
-
-	impl Worker<()> for Message {
+	impl Worker<()> for WorkThread {
   		fn body() {
         	println!("{}", rand::random::<u32>());
     	}
@@ -56,14 +66,36 @@ mod tests {
 
     	let mut handles = Vec::new();
     
-    	for _ in 0..20100 { // pagefile overflow?
-        	handles.push(Message.run());
+    	for _ in 0..200 {
+        	handles.push(WorkThread.run());
     	}
 
     	for h in handles {
         	h.join().unwrap();
     	}
-
-    	//thread::sleep(time::Duration::from_millis(10000));
 	}
+
+    type Message = u32;
+
+    impl Concurrent<()> for Message {
+        fn body(self) {
+            println!("{:?}", &self);
+        }
+    }
+
+    #[test]
+    fn concurrent_test() {
+
+        let mut handles = Vec::new();
+        let mut m: Message = 0; // use mutable binding in top scope to give 'static lifetime.
+    
+        for _ in 0..200 {
+            m = rand::random::<u32>();
+            handles.push(m.run());
+        }
+
+        for h in handles {
+            h.join().unwrap();
+        }
+    }
 }
