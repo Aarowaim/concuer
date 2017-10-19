@@ -34,7 +34,7 @@ where
 
 pub trait Task<A, R>
 where
-    Self: Sync + Send + Sized + 'static,
+    Self: Sync + 'static,
     A: Send + 'static,
     R: Send + 'static,
 {
@@ -49,7 +49,7 @@ where
 
 #[cfg(test)]
 mod tests {
-	use {Worker, Concurrent};
+	use {Worker, Concurrent, Task};
 	use rand;
 	use std::{thread, time};
 
@@ -92,6 +92,28 @@ mod tests {
         for _ in 0..200 {
             m = rand::random::<u32>();
             handles.push(m.run());
+        }
+
+        for h in handles {
+            h.join().unwrap();
+        }
+    }
+
+    struct TaskThread;
+
+    impl Task<u32, ()> for TaskThread {
+        fn body(a: u32) {
+            println!("{:?}", a);
+        }
+    }
+
+    #[test]
+    fn task_test() {
+
+        let mut handles = Vec::new();
+    
+        for _ in 0..200 {
+            handles.push(TaskThread.run(rand::random::<u32>()));
         }
 
         for h in handles {
